@@ -103,6 +103,7 @@ class ImageDecoder {
 		Options decodeOptions = new Options();
 		decodeOptions.inSampleSize = computeImageScale(targetSize, scaleType, viewScaleType);
 		decodeOptions.inPreferredConfig = displayOptions.getBitmapConfig();
+		decodeOptions.inPurgeable = true;
 		return decodeOptions;
 	}
 
