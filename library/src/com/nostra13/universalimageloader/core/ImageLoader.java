@@ -22,7 +22,6 @@ import android.view.ViewGroup.LayoutParams;
 import android.widget.ImageView;
 import android.widget.ImageView.ScaleType;
 
-import com.nostra13.universalimageloader.R;
 import com.nostra13.universalimageloader.cache.disc.DiscCacheAware;
 import com.nostra13.universalimageloader.cache.memory.MemoryCacheAware;
 import com.nostra13.universalimageloader.core.assist.FailReason;
