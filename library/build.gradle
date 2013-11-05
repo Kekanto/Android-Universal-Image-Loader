@@ -1,18 +1,7 @@
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:0.5.+'
-    }
-}
 apply plugin: 'android-library'
 
-dependencies {
-}
-
 android {
-    compileSdkVersion 14
+    compileSdkVersion 18
     buildToolsVersion "19.0.0"
 
     sourceSets {
@@ -35,7 +24,7 @@ android {
         // conflict with src/ being used by the main source set.
         // Adding new build types or product flavors should be accompanied
         // by a similar customization.
-        debug.setRoot('build-types/debug')
-        release.setRoot('build-types/release')
+        //debug.setRoot('build-types/debug')
+        //release.setRoot('build-types/release')
     }
 }
