@@ -15,19 +15,8 @@
  *******************************************************************************/
 package com.nostra13.universalimageloader.core;
 
-import java.io.File;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Executor;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.os.Build;
-
 import com.nostra13.universalimageloader.cache.disc.DiscCacheAware;
 import com.nostra13.universalimageloader.cache.disc.impl.FileCountLimitedDiscCache;
 import com.nostra13.universalimageloader.cache.disc.impl.TotalSizeLimitedDiscCache;
@@ -35,7 +24,6 @@ import com.nostra13.universalimageloader.cache.disc.impl.UnlimitedDiscCache;
 import com.nostra13.universalimageloader.cache.disc.naming.FileNameGenerator;
 import com.nostra13.universalimageloader.cache.disc.naming.HashCodeFileNameGenerator;
 import com.nostra13.universalimageloader.cache.memory.MemoryCacheAware;
-import com.nostra13.universalimageloader.cache.memory.impl.LRULimitedMemoryCache;
 import com.nostra13.universalimageloader.cache.memory.impl.LruMemoryCache;
 import com.nostra13.universalimageloader.core.assist.QueueProcessingType;
 import com.nostra13.universalimageloader.core.assist.deque.LIFOLinkedBlockingDeque;
@@ -47,9 +35,18 @@ import com.nostra13.universalimageloader.core.download.BaseImageDownloader;
 import com.nostra13.universalimageloader.core.download.ImageDownloader;
 import com.nostra13.universalimageloader.utils.StorageUtils;
 
+import java.io.File;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Factory for providing of default options for {@linkplain ImageLoaderConfiguration configuration}
- * 
+ *
  * @author Sergey Tarasevich (nostra13[at]gmail[dot]com)
  * @since 1.5.6
  */
@@ -67,7 +64,7 @@ public class DefaultConfigurationFactory {
 		return new HashCodeFileNameGenerator();
 	}
 
-	/** Creates default implementation of {@link DisckCacheAware} depends on incoming parameters */
+	/** Creates default implementation of {@link DiscCacheAware} depends on incoming parameters */
 	public static DiscCacheAware createDiscCache(Context context, FileNameGenerator discCacheFileNameGenerator, int discCacheSize, int discCacheFileCount) {
 		if (discCacheSize > 0) {
 			File individualCacheDir = StorageUtils.getIndividualCacheDirectory(context);
@@ -82,8 +79,7 @@ public class DefaultConfigurationFactory {
 	}
 
 	/** Creates reserve disc cache which will be used if primary disc cache becomes unavailable */
-	public static DiscCacheAware createReserveDiscCache(Context context) {
-		File cacheDir = context.getCacheDir();
+	public static DiscCacheAware createReserveDiscCache(File cacheDir) {
 		File individualDir = new File(cacheDir, "uil-images");
 		if (individualDir.exists() || individualDir.mkdir()) {
 			cacheDir = individualDir;
@@ -92,21 +88,14 @@ public class DefaultConfigurationFactory {
 	}
 
 	/**
-	 * Creates default implementation of {@link MemoryCacheAware} depends on incoming parameters: <br />
-	 * {@link LruMemoryCache} (for API >= 9) or {@link LRULimitedMemoryCache} (for API < 9).<br />
+	 * Creates default implementation of {@link MemoryCacheAware} - {@link LruMemoryCache}<br />
 	 * Default cache size = 1/8 of available app memory.
 	 */
 	public static MemoryCacheAware<String, Bitmap> createMemoryCache(int memoryCacheSize) {
 		if (memoryCacheSize == 0) {
 			memoryCacheSize = (int) (Runtime.getRuntime().maxMemory() / 8);
 		}
-		MemoryCacheAware<String, Bitmap> memoryCache;
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
-			memoryCache = new LruMemoryCache(memoryCacheSize);
-		} else {
-			memoryCache = new LRULimitedMemoryCache(memoryCacheSize);
-		}
-		return memoryCache;
+		return new LruMemoryCache(memoryCacheSize);
 	}
 
 	/** Creates default implementation of {@link ImageDownloader} - {@link BaseImageDownloader} */
@@ -142,9 +131,10 @@ public class DefaultConfigurationFactory {
 			this.threadPriority = threadPriority;
 			SecurityManager s = System.getSecurityManager();
 			group = (s != null) ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
-			namePrefix = "pool-" + poolNumber.getAndIncrement() + "-thread-";
+			namePrefix = "uil-pool-" + poolNumber.getAndIncrement() + "-thread-";
 		}
 
+		@Override
 		public Thread newThread(Runnable r) {
 			Thread t = new Thread(group, r, namePrefix + threadNumber.getAndIncrement(), 0);
 			if (t.isDaemon()) t.setDaemon(false);

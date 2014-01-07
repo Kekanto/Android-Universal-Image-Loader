@@ -13,39 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package com.nostra13.universalimageloader.core.assist;
+package com.nostra13.universalimageloader.utils;
+
+import android.graphics.Bitmap;
+import com.nostra13.universalimageloader.cache.memory.MemoryCacheAware;
+import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
+import com.nostra13.universalimageloader.core.assist.ImageSize;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-import android.graphics.Bitmap;
-
-import com.nostra13.universalimageloader.cache.memory.MemoryCacheAware;
-import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
-
 /**
  * Utility for generating of keys for memory cache, key comparing and other work with memory cache
- * 
+ *
  * @author Sergey Tarasevich (nostra13[at]gmail[dot]com)
  * @since 1.6.3
  */
-public final class MemoryCacheUtil {
+public final class MemoryCacheUtils {
 
 	private static final String URI_AND_SIZE_SEPARATOR = "_";
 	private static final String WIDTH_AND_HEIGHT_SEPARATOR = "x";
 
-	private MemoryCacheUtil() {
+	private MemoryCacheUtils() {
 	}
 
 	/**
 	 * Generates key for memory cache for incoming image (URI + size).<br />
-	 * Pattern for cache key - {@value #MEMORY_CACHE_KEY_FORMAT}, where (1) - image URI, (2) - image size
-	 * ([width]x[height]).
+	 * Pattern for cache key - <b>[imageUri]_[width]x[height]</b>.
 	 */
 	public static String generateKey(String imageUri, ImageSize targetSize) {
-		return new StringBuilder(imageUri).append(URI_AND_SIZE_SEPARATOR).append(targetSize.getWidth()).append(WIDTH_AND_HEIGHT_SEPARATOR)
-				.append(targetSize.getHeight()).toString();
+		return new StringBuilder(imageUri).append(URI_AND_SIZE_SEPARATOR).append(targetSize.getWidth()).append(WIDTH_AND_HEIGHT_SEPARATOR).append(targetSize.getHeight()).toString();
 	}
 
 	public static Comparator<String> createFuzzyKeyComparator() {

@@ -13,22 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package com.nostra13.universalimageloader.core.assist;
-
-import java.io.File;
+package com.nostra13.universalimageloader.utils;
 
 import com.nostra13.universalimageloader.cache.disc.DiscCacheAware;
+
+import java.io.File;
 
 /**
  * Utility for convenient work with disc cache.<br />
  * <b>NOTE:</b> This utility works with file system so avoid using it on application main thread.
- * 
+ *
  * @author Sergey Tarasevich (nostra13[at]gmail[dot]com)
  * @since 1.8.0
  */
-public final class DiscCacheUtil {
+public final class DiscCacheUtils {
 
-	private DiscCacheUtil() {
+	private DiscCacheUtils() {
 	}
 
 	/** Returns {@link File} of cached image or <b>null</b> if image was not cached in disc cache */
@@ -39,7 +39,7 @@ public final class DiscCacheUtil {
 
 	/**
 	 * Removed cached image file from disc cache (if image was cached in disc cache before)
-	 * 
+	 *
 	 * @return <b>true</b> - if cached image file existed and was deleted; <b>false</b> - otherwise.
 	 */
 	public static boolean removeFromCache(String imageUri, DiscCacheAware discCache) {

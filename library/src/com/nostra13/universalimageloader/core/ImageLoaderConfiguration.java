@@ -15,40 +15,45 @@
  *******************************************************************************/
 package com.nostra13.universalimageloader.core;
 
-import java.util.concurrent.Executor;
-
 import android.content.Context;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.CompressFormat;
-
+import android.util.DisplayMetrics;
 import com.nostra13.universalimageloader.cache.disc.DiscCacheAware;
 import com.nostra13.universalimageloader.cache.disc.impl.UnlimitedDiscCache;
 import com.nostra13.universalimageloader.cache.disc.naming.FileNameGenerator;
 import com.nostra13.universalimageloader.cache.memory.MemoryCacheAware;
 import com.nostra13.universalimageloader.cache.memory.impl.FuzzyKeyMemoryCache;
-import com.nostra13.universalimageloader.core.assist.MemoryCacheUtil;
+import com.nostra13.universalimageloader.core.assist.ImageSize;
+import com.nostra13.universalimageloader.utils.MemoryCacheUtils;
 import com.nostra13.universalimageloader.core.assist.QueueProcessingType;
 import com.nostra13.universalimageloader.core.decode.ImageDecoder;
 import com.nostra13.universalimageloader.core.download.ImageDownloader;
 import com.nostra13.universalimageloader.core.download.NetworkDeniedImageDownloader;
 import com.nostra13.universalimageloader.core.download.SlowNetworkImageDownloader;
+import com.nostra13.universalimageloader.core.process.BitmapProcessor;
 import com.nostra13.universalimageloader.utils.L;
+import com.nostra13.universalimageloader.utils.StorageUtils;
+
+import java.io.File;
+import java.util.concurrent.Executor;
 
 /**
  * Presents configuration for {@link ImageLoader}
- * 
+ *
  * @author Sergey Tarasevich (nostra13[at]gmail[dot]com)
- * @since 1.0.0
  * @see ImageLoader
  * @see MemoryCacheAware
  * @see DiscCacheAware
  * @see DisplayImageOptions
  * @see ImageDownloader
  * @see FileNameGenerator
+ * @since 1.0.0
  */
 public final class ImageLoaderConfiguration {
 
-	final Context context;
+	final Resources resources;
 
 	final int maxImageWidthForMemoryCache;
 	final int maxImageHeightForMemoryCache;
@@ -56,6 +61,7 @@ public final class ImageLoaderConfiguration {
 	final int maxImageHeightForDiscCache;
 	final CompressFormat imageCompressFormatForDiscCache;
 	final int imageQualityForDiscCache;
+	final BitmapProcessor processorForDiscCache;
 
 	final Executor taskExecutor;
 	final Executor taskExecutorForCachedImages;
@@ -71,20 +77,21 @@ public final class ImageLoaderConfiguration {
 	final ImageDownloader downloader;
 	final ImageDecoder decoder;
 	final DisplayImageOptions defaultDisplayImageOptions;
-	final boolean loggingEnabled;
+	final boolean writeLogs;
 
 	final DiscCacheAware reserveDiscCache;
 	final ImageDownloader networkDeniedDownloader;
 	final ImageDownloader slowNetworkDownloader;
 
 	private ImageLoaderConfiguration(final Builder builder) {
-		context = builder.context;
+		resources = builder.context.getResources();
 		maxImageWidthForMemoryCache = builder.maxImageWidthForMemoryCache;
 		maxImageHeightForMemoryCache = builder.maxImageHeightForMemoryCache;
 		maxImageWidthForDiscCache = builder.maxImageWidthForDiscCache;
 		maxImageHeightForDiscCache = builder.maxImageHeightForDiscCache;
 		imageCompressFormatForDiscCache = builder.imageCompressFormatForDiscCache;
 		imageQualityForDiscCache = builder.imageQualityForDiscCache;
+		processorForDiscCache = builder.processorForDiscCache;
 		taskExecutor = builder.taskExecutor;
 		taskExecutorForCachedImages = builder.taskExecutorForCachedImages;
 		threadPoolSize = builder.threadPoolSize;
@@ -93,7 +100,7 @@ public final class ImageLoaderConfiguration {
 		discCache = builder.discCache;
 		memoryCache = builder.memoryCache;
 		defaultDisplayImageOptions = builder.defaultDisplayImageOptions;
-		loggingEnabled = builder.loggingEnabled;
+		writeLogs = builder.writeLogs;
 		downloader = builder.downloader;
 		decoder = builder.decoder;
 
@@ -103,7 +110,8 @@ public final class ImageLoaderConfiguration {
 		networkDeniedDownloader = new NetworkDeniedImageDownloader(downloader);
 		slowNetworkDownloader = new SlowNetworkImageDownloader(downloader);
 
-		reserveDiscCache = DefaultConfigurationFactory.createReserveDiscCache(context);
+		File reserveCacheDir = StorageUtils.getCacheDirectory(builder.context, false);
+		reserveDiscCache = DefaultConfigurationFactory.createReserveDiscCache(reserveCacheDir);
 	}
 
 	/**
@@ -126,14 +134,28 @@ public final class ImageLoaderConfiguration {
 	 * <li>tasksProcessingOrder = {@link QueueProcessingType#FIFO}</li>
 	 * <li>detailed logging disabled</li>
 	 * </ul>
-	 * */
+	 */
 	public static ImageLoaderConfiguration createDefault(Context context) {
 		return new Builder(context).build();
 	}
 
+	ImageSize getMaxImageSize() {
+		DisplayMetrics displayMetrics = resources.getDisplayMetrics();
+
+		int width = maxImageWidthForMemoryCache;
+		if (width <= 0) {
+			width = displayMetrics.widthPixels;
+		}
+		int height = maxImageHeightForMemoryCache;
+		if (height <= 0) {
+			height = displayMetrics.heightPixels;
+		}
+		return new ImageSize(width, height);
+	}
+
 	/**
 	 * Builder for {@link ImageLoaderConfiguration}
-	 * 
+	 *
 	 * @author Sergey Tarasevich (nostra13[at]gmail[dot]com)
 	 */
 	public static class Builder {
@@ -159,6 +181,7 @@ public final class ImageLoaderConfiguration {
 		private int maxImageHeightForDiscCache = 0;
 		private CompressFormat imageCompressFormatForDiscCache = null;
 		private int imageQualityForDiscCache = 0;
+		private BitmapProcessor processorForDiscCache = null;
 
 		private Executor taskExecutor = null;
 		private Executor taskExecutorForCachedImages = null;
@@ -181,7 +204,7 @@ public final class ImageLoaderConfiguration {
 		private ImageDecoder decoder;
 		private DisplayImageOptions defaultDisplayImageOptions = null;
 
-		private boolean loggingEnabled = false;
+		private boolean writeLogs = false;
 
 		public Builder(Context context) {
 			this.context = context.getApplicationContext();
@@ -189,11 +212,11 @@ public final class ImageLoaderConfiguration {
 
 		/**
 		 * Sets options for memory cache
-		 * 
-		 * @param maxImageWidthForMemoryCache Maximum image width which will be used for memory saving during decoding
-		 *            an image to {@link android.graphics.Bitmap Bitmap}. <b>Default value - device's screen width</b>
+		 *
+		 * @param maxImageWidthForMemoryCache  Maximum image width which will be used for memory saving during decoding
+		 *                                     an image to {@link android.graphics.Bitmap Bitmap}. <b>Default value - device's screen width</b>
 		 * @param maxImageHeightForMemoryCache Maximum image height which will be used for memory saving during decoding
-		 *            an image to {@link android.graphics.Bitmap Bitmap}. <b>Default value</b> - device's screen height
+		 *                                     an image to {@link android.graphics.Bitmap Bitmap}. <b>Default value</b> - device's screen height
 		 */
 		public Builder memoryCacheExtraOptions(int maxImageWidthForMemoryCache, int maxImageHeightForMemoryCache) {
 			this.maxImageWidthForMemoryCache = maxImageWidthForMemoryCache;
@@ -204,19 +227,23 @@ public final class ImageLoaderConfiguration {
 		/**
 		 * Sets options for resizing/compressing of downloaded images before saving to disc cache.<br />
 		 * <b>NOTE: Use this option only when you have appropriate needs. It can make ImageLoader slower.</b>
-		 * 
-		 * @param maxImageWidthForDiscCache Maximum width of downloaded images for saving at disc cache
+		 *
+		 * @param maxImageWidthForDiscCache  Maximum width of downloaded images for saving at disc cache
 		 * @param maxImageHeightForDiscCache Maximum height of downloaded images for saving at disc cache
-		 * @param compressFormat {@link android.graphics.Bitmap.CompressFormat Compress format} downloaded images to
-		 *            save them at disc cache
-		 * @param compressQuality Hint to the compressor, 0-100. 0 meaning compress for small size, 100 meaning compress
-		 *            for max quality. Some formats, like PNG which is lossless, will ignore the quality setting
+		 * @param compressFormat             {@link android.graphics.Bitmap.CompressFormat Compress format} downloaded images to
+		 *                                   save them at disc cache
+		 * @param compressQuality            Hint to the compressor, 0-100. 0 meaning compress for small size, 100 meaning compress
+		 *                                   for max quality. Some formats, like PNG which is lossless, will ignore the quality setting
+		 * @param processorForDiscCache      null-ok; {@linkplain BitmapProcessor Bitmap processor} which process images before saving them in disc cache
 		 */
-		public Builder discCacheExtraOptions(int maxImageWidthForDiscCache, int maxImageHeightForDiscCache, CompressFormat compressFormat, int compressQuality) {
+		public Builder discCacheExtraOptions(int maxImageWidthForDiscCache, int maxImageHeightForDiscCache,
+											 CompressFormat compressFormat, int compressQuality,
+											 BitmapProcessor processorForDiscCache) {
 			this.maxImageWidthForDiscCache = maxImageWidthForDiscCache;
 			this.maxImageHeightForDiscCache = maxImageHeightForDiscCache;
 			this.imageCompressFormatForDiscCache = compressFormat;
 			this.imageQualityForDiscCache = compressQuality;
+			this.processorForDiscCache = processorForDiscCache;
 			return this;
 		}
 
@@ -230,7 +257,7 @@ public final class ImageLoaderConfiguration {
 		 * <li>{@link #threadPriority(int)}</li>
 		 * <li>{@link #tasksProcessingOrder(QueueProcessingType)}</li>
 		 * </ul>
-		 * 
+		 *
 		 * @see #taskExecutorForCachedImages(Executor)
 		 */
 		public Builder taskExecutor(Executor executor) {
@@ -247,7 +274,7 @@ public final class ImageLoaderConfiguration {
 		 * are executed quickly so UIL prefer to use separate executor for them).<br />
 		 * <br />
 		 * If you set the same executor for {@linkplain #taskExecutor(Executor) general tasks} and
-		 * {@linkplain #taskExecutorForCachedImages(Executor) tasks about cached images} then these tasks will be in the
+		 * tasks about cached images (this method) then these tasks will be in the
 		 * same thread pool. So short-lived tasks can wait a long time for their turn.<br />
 		 * <br />
 		 * <b>NOTE:</b> If you set custom executor then following configuration options will not be considered for this
@@ -257,7 +284,7 @@ public final class ImageLoaderConfiguration {
 		 * <li>{@link #threadPriority(int)}</li>
 		 * <li>{@link #tasksProcessingOrder(QueueProcessingType)}</li>
 		 * </ul>
-		 * 
+		 *
 		 * @see #taskExecutor(Executor)
 		 */
 		public Builder taskExecutorForCachedImages(Executor executorForCachedImages) {
@@ -272,7 +299,7 @@ public final class ImageLoaderConfiguration {
 		/**
 		 * Sets thread pool size for image display tasks.<br />
 		 * Default value - {@link #DEFAULT_THREAD_POOL_SIZE this}
-		 * */
+		 */
 		public Builder threadPoolSize(int threadPoolSize) {
 			if (taskExecutor != null || taskExecutorForCachedImages != null) {
 				L.w(WARNING_OVERLAP_EXECUTOR);
@@ -286,7 +313,7 @@ public final class ImageLoaderConfiguration {
 		 * Sets the priority for image loading threads. Should be <b>NOT</b> greater than {@link Thread#MAX_PRIORITY} or
 		 * less than {@link Thread#MIN_PRIORITY}<br />
 		 * Default value - {@link #DEFAULT_THREAD_PRIORITY this}
-		 * */
+		 */
 		public Builder threadPriority(int threadPriority) {
 			if (taskExecutor != null || taskExecutorForCachedImages != null) {
 				L.w(WARNING_OVERLAP_EXECUTOR);
@@ -296,7 +323,7 @@ public final class ImageLoaderConfiguration {
 				this.threadPriority = Thread.MIN_PRIORITY;
 			} else {
 				if (threadPriority > Thread.MAX_PRIORITY) {
-					threadPriority = Thread.MAX_PRIORITY;
+					this.threadPriority = Thread.MAX_PRIORITY;
 				} else {
 					this.threadPriority = threadPriority;
 				}
@@ -311,7 +338,7 @@ public final class ImageLoaderConfiguration {
 		 * So <b>the default behavior is to allow to cache multiple sizes of one image in memory</b>. You can
 		 * <b>deny</b> it by calling <b>this</b> method: so when some image will be cached in memory then previous
 		 * cached size of this image (if it exists) will be removed from memory cache before.
-		 * */
+		 */
 		public Builder denyCacheImageMultipleSizesInMemory() {
 			this.denyCacheImageMultipleSizesInMemory = true;
 			return this;
@@ -346,6 +373,29 @@ public final class ImageLoaderConfiguration {
 			}
 
 			this.memoryCacheSize = memoryCacheSize;
+			return this;
+		}
+
+		/**
+		 * Sets maximum memory cache size (in percent of available app memory) for {@link android.graphics.Bitmap
+		 * bitmaps}.<br />
+		 * Default value - 1/8 of available app memory.<br />
+		 * <b>NOTE:</b> If you use this method then
+		 * {@link com.nostra13.universalimageloader.cache.memory.impl.LruMemoryCache LruMemoryCache} will be used as
+		 * memory cache. You can use {@link #memoryCache(MemoryCacheAware)} method to set your own implementation of
+		 * {@link MemoryCacheAware}.
+		 */
+		public Builder memoryCacheSizePercentage(int availableMemoryPercent) {
+			if (availableMemoryPercent <= 0 || availableMemoryPercent >= 100) {
+				throw new IllegalArgumentException("availableMemoryPercent must be in range (0 < % < 100)");
+			}
+
+			if (memoryCache != null) {
+				L.w(WARNING_OVERLAP_MEMORY_CACHE);
+			}
+
+			long availableMemory = Runtime.getRuntime().maxMemory();
+			memoryCacheSize = (int) (availableMemory * (availableMemoryPercent / 100f));
 			return this;
 		}
 
@@ -427,7 +477,7 @@ public final class ImageLoaderConfiguration {
 		 * Default value -
 		 * {@link com.nostra13.universalimageloader.core.DefaultConfigurationFactory#createImageDownloader(Context)
 		 * DefaultConfigurationFactory.createImageDownloader()}
-		 * */
+		 */
 		public Builder imageDownloader(ImageDownloader imageDownloader) {
 			this.downloader = imageDownloader;
 			return this;
@@ -438,7 +488,7 @@ public final class ImageLoaderConfiguration {
 		 * Default value -
 		 * {@link com.nostra13.universalimageloader.core.DefaultConfigurationFactory#createImageDecoder(boolean)
 		 * DefaultConfigurationFactory.createImageDecoder()}
-		 * */
+		 */
 		public Builder imageDecoder(ImageDecoder imageDecoder) {
 			this.decoder = imageDecoder;
 			return this;
@@ -481,26 +531,31 @@ public final class ImageLoaderConfiguration {
 			return this;
 		}
 
-		/** Enabled detail logging of {@link ImageLoader} work */
-		public Builder enableLogging() {
-			this.loggingEnabled = true;
+		/**
+		 * Enables detail logging of {@link ImageLoader} work. To prevent detail logs don't call this method.
+		 * Consider {@link com.nostra13.universalimageloader.utils.L#disableLogging()} to disable ImageLoader logging completely (even error logs)
+		 */
+		public Builder writeDebugLogs() {
+			this.writeLogs = true;
 			return this;
 		}
 
 		/** Builds configured {@link ImageLoaderConfiguration} object */
 		public ImageLoaderConfiguration build() {
-			initEmptyFiledsWithDefaultValues();
+			initEmptyFieldsWithDefaultValues();
 			return new ImageLoaderConfiguration(this);
 		}
 
-		private void initEmptyFiledsWithDefaultValues() {
+		private void initEmptyFieldsWithDefaultValues() {
 			if (taskExecutor == null) {
-				taskExecutor = DefaultConfigurationFactory.createExecutor(threadPoolSize, threadPriority, tasksProcessingType);
+				taskExecutor = DefaultConfigurationFactory
+						.createExecutor(threadPoolSize, threadPriority, tasksProcessingType);
 			} else {
 				customExecutor = true;
 			}
 			if (taskExecutorForCachedImages == null) {
-				taskExecutorForCachedImages = DefaultConfigurationFactory.createExecutor(threadPoolSize, threadPriority, tasksProcessingType);
+				taskExecutorForCachedImages = DefaultConfigurationFactory
+						.createExecutor(threadPoolSize, threadPriority, tasksProcessingType);
 			} else {
 				customExecutorForCachedImages = true;
 			}
@@ -508,19 +563,21 @@ public final class ImageLoaderConfiguration {
 				if (discCacheFileNameGenerator == null) {
 					discCacheFileNameGenerator = DefaultConfigurationFactory.createFileNameGenerator();
 				}
-				discCache = DefaultConfigurationFactory.createDiscCache(context, discCacheFileNameGenerator, discCacheSize, discCacheFileCount);
+				discCache = DefaultConfigurationFactory
+						.createDiscCache(context, discCacheFileNameGenerator, discCacheSize, discCacheFileCount);
 			}
 			if (memoryCache == null) {
 				memoryCache = DefaultConfigurationFactory.createMemoryCache(memoryCacheSize);
 			}
 			if (denyCacheImageMultipleSizesInMemory) {
-				memoryCache = new FuzzyKeyMemoryCache<String, Bitmap>(memoryCache, MemoryCacheUtil.createFuzzyKeyComparator());
+				memoryCache = new FuzzyKeyMemoryCache<String, Bitmap>(memoryCache, MemoryCacheUtils
+						.createFuzzyKeyComparator());
 			}
 			if (downloader == null) {
 				downloader = DefaultConfigurationFactory.createImageDownloader(context);
 			}
 			if (decoder == null) {
-				decoder = DefaultConfigurationFactory.createImageDecoder(loggingEnabled);
+				decoder = DefaultConfigurationFactory.createImageDecoder(writeLogs);
 			}
 			if (defaultDisplayImageOptions == null) {
 				defaultDisplayImageOptions = DisplayImageOptions.createSimple();

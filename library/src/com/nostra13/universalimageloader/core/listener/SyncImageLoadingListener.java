@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright 2011-2013 Sergey Tarasevich
+ * Copyright 2013 Sergey Tarasevich
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,27 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package com.nostra13.universalimageloader.core.display;
+package com.nostra13.universalimageloader.core.listener;
 
 import android.graphics.Bitmap;
-import android.widget.ImageView;
-
-import com.nostra13.universalimageloader.core.DisplayImageOptions;
-import com.nostra13.universalimageloader.core.ImageLoader;
+import android.view.View;
 
 /**
- * Fake displayer which doesn't display Bitmap in ImageView. Should be used in {@linkplain DisplayImageOptions display
- * options} for
- * {@link ImageLoader#loadImage(String, int, int, com.nostra13.universalimageloader.core.DisplayImageOptions, com.nostra13.universalimageloader.core.assist.ImageLoadingListener)
- * ImageLoader.loadImage()}
- * 
+ * Listener which is designed for synchronous image loading.
+ *
  * @author Sergey Tarasevich (nostra13[at]gmail[dot]com)
- * @since 1.6.0
+ * @since 1.9.0
  */
-public final class FakeBitmapDisplayer implements BitmapDisplayer {
+public class SyncImageLoadingListener extends SimpleImageLoadingListener {
+
+	private Bitmap loadedImage;
+
 	@Override
-	public Bitmap display(Bitmap bitmap, ImageView imageView) {
-		// Do nothing
-		return bitmap;
+	public void onLoadingComplete(String imageUri, View view, Bitmap loadedImage) {
+		this.loadedImage = loadedImage;
+	}
+
+	public Bitmap getLoadedBitmap() {
+		return loadedImage;
 	}
 }
