@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright 2011-2013 Sergey Tarasevich
+ * Copyright 2011-2014 Sergey Tarasevich
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,8 @@ import com.nostra13.universalimageloader.core.imageaware.ImageViewAware;
  * <br />
  * <br />
  * If this implementation doesn't meet your needs then consider
- * <a href="https://github.com/vinc3m1/RoundedImageView">this project</a> for usage.
+ * <a href="https://github.com/vinc3m1/RoundedImageView">RoundedImageView</a> or
+ * <a href="https://github.com/Pkmmte/CircularImageView">CircularImageView</a> projects for usage.
  *
  * @author Sergey Tarasevich (nostra13[at]gmail[dot]com)
  * @since 1.5.6
@@ -60,7 +61,7 @@ public class RoundedBitmapDisplayer implements BitmapDisplayer {
 		imageAware.setImageDrawable(new RoundedDrawable(bitmap, cornerRadius, margin));
 	}
 
-	protected static class RoundedDrawable extends Drawable {
+	public static class RoundedDrawable extends Drawable {
 
 		protected final float cornerRadius;
 		protected final int margin;
@@ -70,7 +71,7 @@ public class RoundedBitmapDisplayer implements BitmapDisplayer {
 		protected final BitmapShader bitmapShader;
 		protected final Paint paint;
 
-		RoundedDrawable(Bitmap bitmap, int cornerRadius, int margin) {
+		public RoundedDrawable(Bitmap bitmap, int cornerRadius, int margin) {
 			this.cornerRadius = cornerRadius;
 			this.margin = margin;
 
