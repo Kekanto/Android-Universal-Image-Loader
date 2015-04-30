@@ -4,6 +4,10 @@ android {
     compileSdkVersion 18
     buildToolsVersion "21.1.2"
 
+    defaultConfig {
+        minSdkVersion 14
+    }
+
     sourceSets {
         main {
             manifest.srcFile 'AndroidManifest.xml'
@@ -27,4 +31,14 @@ android {
         //debug.setRoot('build-types/debug')
         //release.setRoot('build-types/release')
     }
+}
+
+repositories {
+    mavenCentral()
+}
+
+
+dependencies {
+    // your app's other dependencies
+    compile ('com.facebook.fresco:fresco:0.4.0+') { exclude group: 'com.parse.bolts', module: 'bolts-android' }
 }

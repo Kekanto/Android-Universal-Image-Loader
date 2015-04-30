@@ -16,11 +16,14 @@
 package com.nostra13.universalimageloader.core;
 
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.ImageView;
+
+import com.facebook.drawee.view.SimpleDraweeView;
 import com.nostra13.universalimageloader.cache.disc.DiskCache;
 import com.nostra13.universalimageloader.cache.memory.MemoryCache;
 import com.nostra13.universalimageloader.core.assist.FailReason;
@@ -300,7 +303,12 @@ public class ImageLoader {
 	 * @throws IllegalArgumentException if passed <b>imageView</b> is null
 	 */
 	public void displayImage(String uri, ImageView imageView, DisplayImageOptions options) {
-		displayImage(uri, new ImageViewAware(imageView), options, null, null);
+	    if(imageView instanceof SimpleDraweeView){
+            imageView.setImageURI(Uri.parse(uri));
+        }
+        else{
+            displayImage(uri, new ImageViewAware(imageView), options, null, null);
+        }
 	}
 
 	/**
